@@ -1,5 +1,6 @@
-use std::ops;
 use std::ops::*;
+pub use crate::traits::*;
+use crate::vec2::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vec3<T: Copy> {
@@ -10,6 +11,10 @@ impl<T: Copy> Vec3<T> {
     pub fn new(x: T, y: T, z: T) -> Self {
         Self { t: [x, y, z] }
     }
+
+    pub fn as_vec2(&self) -> Vec2<T> {
+        Vec2::new(self.t[0], self.t[1])
+    } 
 }
 
 impl<T: Add<T, Output = T> + Mul<T, Output = T> + Clone + Copy> Vec3<T> {
@@ -34,11 +39,6 @@ impl<T: Sub<T, Output = T> + Mul<T, Output = T> + Clone + Copy> Vec3<T> {
     }
 }
 
-pub trait Norm {
-    type Length;
-    fn length(self: &Self) -> Self::Length;
-}
-
 impl Norm for Vec3<f32> {
     type Length = f32;
     fn length(self: &Self) -> Self::Length {
@@ -53,7 +53,7 @@ impl Norm for Vec3<f64> {
     }
 }
 
-impl<T: ops::Neg<Output = T> + Copy> ops::Neg for &Vec3<T> {
+impl<T: Neg<Output = T> + Copy> Neg for &Vec3<T> {
     type Output = Vec3<T>;
 
     fn neg(self) -> Self::Output {
@@ -63,7 +63,7 @@ impl<T: ops::Neg<Output = T> + Copy> ops::Neg for &Vec3<T> {
     }
 }
 
-impl<T: ops::Neg<Output = T> + Copy> ops::Neg for Vec3<T> {
+impl<T: Neg<Output = T> + Copy> Neg for Vec3<T> {
     type Output = Vec3<T>;
 
     fn neg(self) -> Self::Output {
@@ -73,7 +73,7 @@ impl<T: ops::Neg<Output = T> + Copy> ops::Neg for Vec3<T> {
     }
 }
 
-impl<T: ops::Add<T, Output = T> + Copy> ops::Add<&Vec3<T>> for &Vec3<T> {
+impl<T: Add<T, Output = T> + Copy> Add<&Vec3<T>> for &Vec3<T> {
     type Output = Vec3<T>;
 
     fn add(self, rhs: &Vec3<T>) -> Self::Output {
@@ -87,7 +87,7 @@ impl<T: ops::Add<T, Output = T> + Copy> ops::Add<&Vec3<T>> for &Vec3<T> {
     }
 }
 
-impl<T: ops::Add<T, Output = T> + Copy> ops::Add<Vec3<T>> for Vec3<T> {
+impl<T: Add<T, Output = T> + Copy> Add<Vec3<T>> for Vec3<T> {
     type Output = Vec3<T>;
 
     fn add(mut self, rhs: Vec3<T>) -> Self::Output {
@@ -98,7 +98,7 @@ impl<T: ops::Add<T, Output = T> + Copy> ops::Add<Vec3<T>> for Vec3<T> {
     }
 }
 
-impl<T: ops::Add<T, Output = T> + Copy> ops::Add<&Vec3<T>> for Vec3<T> {
+impl<T: Add<T, Output = T> + Copy> Add<&Vec3<T>> for Vec3<T> {
     type Output = Vec3<T>;
 
     fn add(mut self, rhs: &Vec3<T>) -> Self::Output {
@@ -109,7 +109,7 @@ impl<T: ops::Add<T, Output = T> + Copy> ops::Add<&Vec3<T>> for Vec3<T> {
     }
 }
 
-impl<T: ops::Add<T, Output = T> + Copy> ops::Add<Vec3<T>> for &Vec3<T> {
+impl<T: Add<T, Output = T> + Copy> Add<Vec3<T>> for &Vec3<T> {
     type Output = Vec3<T>;
 
     fn add(self, mut rhs: Vec3<T>) -> Self::Output {
@@ -120,15 +120,15 @@ impl<T: ops::Add<T, Output = T> + Copy> ops::Add<Vec3<T>> for &Vec3<T> {
     }
 }
 
-impl<T: ops::AddAssign<T> + Copy> ops::AddAssign<&Vec3<T>> for Vec3<T> {
-    fn add_assign(&mut self, rhs: &Self) {
-        self.t[0] += rhs.t[0];
-        self.t[1] += rhs.t[1];
-        self.t[2] += rhs.t[2];
+impl<'a, T: AddAssign<&'a T> + Copy> AddAssign<&'a Vec3<T>> for Vec3<T> {
+    fn add_assign(&mut self, rhs: &'a Self) {
+        self.t[0] += &rhs.t[0];
+        self.t[1] += &rhs.t[1];
+        self.t[2] += &rhs.t[2];
     }
 }
 
-impl<T: ops::Sub<T, Output = T> + Copy> ops::Sub<&Vec3<T>> for &Vec3<T> {
+impl<T: Sub<T, Output = T> + Copy> Sub<&Vec3<T>> for &Vec3<T> {
     type Output = Vec3<T>;
 
     fn sub(self, rhs: &Vec3<T>) -> Self::Output {
@@ -142,7 +142,7 @@ impl<T: ops::Sub<T, Output = T> + Copy> ops::Sub<&Vec3<T>> for &Vec3<T> {
     }
 }
 
-impl<T: ops::Sub<T, Output = T> + Copy> ops::Sub<Vec3<T>> for Vec3<T> {
+impl<T: Sub<T, Output = T> + Copy> Sub<Vec3<T>> for Vec3<T> {
     type Output = Vec3<T>;
 
     fn sub(mut self, rhs: Vec3<T>) -> Self::Output {
@@ -153,7 +153,7 @@ impl<T: ops::Sub<T, Output = T> + Copy> ops::Sub<Vec3<T>> for Vec3<T> {
     }
 }
 
-impl<T: ops::Sub<T, Output = T> + Copy> ops::Sub<&Vec3<T>> for Vec3<T> {
+impl<T: Sub<T, Output = T> + Copy> Sub<&Vec3<T>> for Vec3<T> {
     type Output = Vec3<T>;
 
     fn sub(mut self, rhs: &Vec3<T>) -> Self::Output {
@@ -164,7 +164,7 @@ impl<T: ops::Sub<T, Output = T> + Copy> ops::Sub<&Vec3<T>> for Vec3<T> {
     }
 }
 
-impl<T: ops::Sub<T, Output = T> + Copy> ops::Sub<Vec3<T>> for &Vec3<T> {
+impl<T: Sub<T, Output = T> + Copy> Sub<Vec3<T>> for &Vec3<T> {
     type Output = Vec3<T>;
 
     fn sub(self, mut rhs: Vec3<T>) -> Self::Output {
@@ -175,15 +175,15 @@ impl<T: ops::Sub<T, Output = T> + Copy> ops::Sub<Vec3<T>> for &Vec3<T> {
     }
 }
 
-impl<T: ops::SubAssign<T> + Copy> ops::SubAssign<&Vec3<T>> for Vec3<T> {
-    fn sub_assign(&mut self, rhs: &Self) {
-        self.t[0] -= rhs.t[0];
-        self.t[1] -= rhs.t[1];
-        self.t[2] -= rhs.t[2];
+impl<'a, T: SubAssign<&'a T> + Copy> SubAssign<&'a Vec3<T>> for Vec3<T> {
+    fn sub_assign(&mut self, rhs: &'a Self) {
+        self.t[0] -= &rhs.t[0];
+        self.t[1] -= &rhs.t[1];
+        self.t[2] -= &rhs.t[2];
     }
 }
 
-impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<&Vec3<T>> for &Vec3<T> {
+impl<T: Mul<T, Output = T> + Copy> Mul<&Vec3<T>> for &Vec3<T> {
     type Output = Vec3<T>;
 
     fn mul(self, rhs: &Vec3<T>) -> Self::Output {
@@ -197,7 +197,7 @@ impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<&Vec3<T>> for &Vec3<T> {
     }
 }
 
-impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<Vec3<T>> for Vec3<T> {
+impl<T: Mul<T, Output = T> + Copy> Mul<Vec3<T>> for Vec3<T> {
     type Output = Vec3<T>;
 
     fn mul(mut self, rhs: Vec3<T>) -> Self::Output {
@@ -208,7 +208,7 @@ impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<Vec3<T>> for Vec3<T> {
     }
 }
 
-impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<Vec3<T>> for &Vec3<T> {
+impl<T: Mul<T, Output = T> + Copy> Mul<Vec3<T>> for &Vec3<T> {
     type Output = Vec3<T>;
 
     fn mul(self, mut rhs: Vec3<T>) -> Self::Output {
@@ -219,7 +219,7 @@ impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<Vec3<T>> for &Vec3<T> {
     }
 }
 
-impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<&Vec3<T>> for Vec3<T> {
+impl<T: Mul<T, Output = T> + Copy> Mul<&Vec3<T>> for Vec3<T> {
     type Output = Vec3<T>;
 
     fn mul(mut self, rhs: &Vec3<T>) -> Self::Output {
@@ -230,15 +230,15 @@ impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<&Vec3<T>> for Vec3<T> {
     }
 }
 
-impl<T: ops::MulAssign<T> + Copy> ops::MulAssign<&Vec3<T>> for Vec3<T> {
-    fn mul_assign(&mut self, rhs: &Self) {
-        self.t[0] *= rhs.t[0];
-        self.t[1] *= rhs.t[1];
-        self.t[2] *= rhs.t[2];
+impl<'a, T: MulAssign<&'a T> + Copy> MulAssign<&'a Vec3<T>> for Vec3<T> {
+    fn mul_assign(&mut self, rhs: &'a Self) {
+        self.t[0] *= &rhs.t[0];
+        self.t[1] *= &rhs.t[1];
+        self.t[2] *= &rhs.t[2];
     }
 }
 
-impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<T> for &Vec3<T> {
+impl<T: Mul<T, Output = T> + Copy> Mul<T> for &Vec3<T> {
     type Output = Vec3<T>;
 
     fn mul(self, rhs: T) -> Self::Output {
@@ -248,7 +248,7 @@ impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<T> for &Vec3<T> {
     }
 }
 
-impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<T> for Vec3<T> {
+impl<T: Mul<T, Output = T> + Copy> Mul<T> for Vec3<T> {
     type Output = Vec3<T>;
 
     fn mul(mut self, rhs: T) -> Self::Output {
@@ -259,7 +259,7 @@ impl<T: ops::Mul<T, Output = T> + Copy> ops::Mul<T> for Vec3<T> {
     }
 }
 
-impl<T: ops::MulAssign<T> + Copy> ops::MulAssign<T> for Vec3<T> {
+impl<T: MulAssign<T> + Copy> MulAssign<T> for Vec3<T> {
     fn mul_assign(&mut self, rhs: T) {
         self.t[0] *= rhs;
         self.t[1] *= rhs;
@@ -267,29 +267,7 @@ impl<T: ops::MulAssign<T> + Copy> ops::MulAssign<T> for Vec3<T> {
     }
 }
 
-impl<T: ops::Div<T, Output = T> + Copy> ops::Div<&Vec3<T>> for &Vec3<T> {
-    type Output = Vec3<T>;
-
-    fn div(self, rhs: &Vec3<T>) -> Self::Output {
-        Vec3::<T> {
-            t: [
-                self.t[0] / rhs.t[0],
-                self.t[1] / rhs.t[1],
-                self.t[2] / rhs.t[2],
-            ],
-        }
-    }
-}
-
-impl<T: ops::DivAssign<T> + Copy> ops::DivAssign<&Vec3<T>> for Vec3<T> {
-    fn div_assign(&mut self, rhs: &Self) {
-        self.t[0] /= rhs.t[0];
-        self.t[1] /= rhs.t[1];
-        self.t[2] /= rhs.t[2];
-    }
-}
-
-impl<T: ops::Div<T, Output = T> + Copy> ops::Div<T> for &Vec3<T> {
+impl<T: Div<T, Output = T> + Copy> Div<T> for &Vec3<T> {
     type Output = Vec3<T>;
 
     fn div(self, rhs: T) -> Self::Output {
@@ -299,7 +277,7 @@ impl<T: ops::Div<T, Output = T> + Copy> ops::Div<T> for &Vec3<T> {
     }
 }
 
-impl<T: ops::DivAssign<T> + Copy> ops::DivAssign<T> for Vec3<T> {
+impl<T: DivAssign<T> + Copy> DivAssign<T> for Vec3<T> {
     fn div_assign(&mut self, rhs: T) {
         self.t[0] /= rhs;
         self.t[1] /= rhs;
