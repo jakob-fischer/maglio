@@ -13,7 +13,7 @@ pub trait BoundingBoxTrait: Sized + Clone + Default + std::fmt::Debug {
 }
 
 pub trait HittableBoundingBoxTrait: BoundingBoxTrait {
-    fn hit(&self, ray: &ConstrainedRay) -> HitBoxResult;
+    fn hit(&self, ray: &ConstrainedRay3d) -> HitBoxResult;
 }
 
 impl Default for BoundingBox3d {
@@ -133,7 +133,7 @@ impl BoundingBoxTrait for BoundingBox3d {
 }
 
 impl HittableBoundingBoxTrait for BoundingBox3d {
-    fn hit(&self, ray: &ConstrainedRay) -> HitBoxResult {
+    fn hit(&self, ray: &ConstrainedRay3d) -> HitBoxResult {
         self.is_hit_by_ray(&ray)
     }
 }
@@ -237,11 +237,11 @@ impl<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
     fn get_closest_hit_internal<F>(
         node: &KdNode<BoundingBox, Content>,
         fun: &F,
-        cray: &ConstrainedRay,
+        cray: &ConstrainedRay3d,
         result: &mut Option<Arc<Content>>,
         current: &mut f64,
     ) where
-        F: Fn(&Content, &ConstrainedRay) -> Option<f64>,
+        F: Fn(&Content, &ConstrainedRay3d) -> Option<f64>,
     {
         for content in &node.content {
             if let Some(candidate) = fun(content, cray) {
@@ -267,9 +267,9 @@ impl<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
         }
     }
 
-    pub fn get_closest_hit<F>(&self, fun: &F, cray: &ConstrainedRay) -> Option<Arc<Content>>
+    pub fn get_closest_hit<F>(&self, fun: &F, cray: &ConstrainedRay3d) -> Option<Arc<Content>>
     where
-        F: Fn(&Content, &ConstrainedRay) -> Option<f64>,
+        F: Fn(&Content, &ConstrainedRay3d) -> Option<f64>,
     {
         let mut result: Option<Arc<Content>> = None;
         let mut current = cray.range.1;

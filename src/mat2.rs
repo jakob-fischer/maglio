@@ -12,6 +12,26 @@ impl<T: Copy> Mat2<T> {
     }
 }
 
+impl Mat2<f32> {
+    pub fn new_rot(theta : f32) -> Self {
+        Self::new(Vec2::<f32>::new(theta.cos(), -theta.sin()), Vec2::<f32>::new(theta.sin(), theta.cos()))
+    }
+
+    pub fn new_rot90() -> Self {
+        Self::new_rot(std::f32::consts::PI/2.0)
+    }
+}
+
+impl Mat2<f64> {
+    pub fn new_rot(theta : f64) -> Self {
+        Self::new(Vec2::<f64>::new(theta.cos(), -theta.sin()), Vec2::<f64>::new(theta.sin(), theta.cos()))
+    }
+
+    pub fn new_rot90() -> Self {
+        Self::new_rot(std::f64::consts::PI/2.0)
+    }
+}
+
 impl<T: Neg<Output = T> + Copy> Neg for &Mat2<T> {
     type Output = Mat2<T>;
 

@@ -1,17 +1,33 @@
 use crate::vec3::*;
+use crate::vec2::*;
+use crate::mat2::*;
 
 pub type Colour = Vec3d;
-pub type Point = Vec3d;
-pub type Direction = Vec3d;
+pub type Point3d = Vec3d;
+pub type Direction3d = Vec3d;
+
+pub type Point2d = Vec2d;
+pub type Direction2d = Vec2d;
 
 #[derive(Clone)]
-pub struct Ray {
-    pub origin: Point,
-    pub direction: Direction,
+pub struct Ray3d {
+    pub origin: Point3d,
+    pub direction: Direction3d,
 }
 
-pub struct ConstrainedRay {
-    pub ray: Ray,
+pub struct ConstrainedRay3d {
+    pub ray: Ray3d,
+    pub range: (f64, f64),
+}
+
+#[derive(Clone)]
+pub struct Ray2d {
+    pub origin: Point2d,
+    pub direction: Direction2d,
+}
+
+pub struct ConstrainedRay2d {
+    pub ray: Ray2d,
     pub range: (f64, f64),
 }
 
@@ -34,7 +50,7 @@ impl BoundingBox3d {
 
     fn intersects_with_point_projected_in_dimension(
         &self,
-        point: &Point,
+        point: &Point3d,
         dimension: usize,
     ) -> bool {
         match dimension {
@@ -66,7 +82,7 @@ impl BoundingBox3d {
             && self.intersects_in_dimentions(other, 2)
     }
 
-    pub fn is_hit_by_ray(&self, cray: &ConstrainedRay) -> HitBoxResult {
+    pub fn is_hit_by_ray(&self, cray: &ConstrainedRay3d) -> HitBoxResult {
         let ray = &cray.ray;
         let range = &cray.range;
 
@@ -113,12 +129,65 @@ impl BoundingBox3d {
     }
 }
 
-impl Ray {
-    pub fn new(origin: Point, direction: Direction) -> Self {
+impl Ray3d {
+    pub fn new(origin: Point3d, direction: Direction3d) -> Self {
         Self { origin, direction }
     }
 
-    pub fn at(&self, t: f64) -> Point {
+    pub fn at(&self, t: f64) -> Point3d {
         &(&self.direction * t) + &self.origin
     }
+}
+
+impl Ray2d {
+    pub fn new(origin: Point2d, direction: Direction2d) -> Self {
+        Self { origin, direction }
+    }
+
+    pub fn at(&self, t: f64) -> Point2d {
+        &(&self.direction * t) + &self.origin
+    }
+
+    pub fn get_ray_between_points(p1 : &Point2d, p2 : &Point2d) -> Ray2d {
+        let rot90 = &Mat2d::new_rot90();
+        let direction = rot90 * (p2 - p1);
+        let origin = (p1+p2)*0.5;
+        Ray2d { origin, direction}
+    }
+
+    pub fn get_intersection(self : &Ray2d, other : &Ray2d) -> Option<f64> {
+        let det = self.direction.t[0]*other.direction.t[1] - self.direction.t[1]*other.direction.t[0];
+
+        if det == 0.0 {
+            return None
+        }
+
+        let dif = other.origin - self.origin;
+        Some((other.direction.t[1] * dif.t[0] - other.direction.t[0]*dif.t[1]) / det)
+    }
+}
+
+
+#[cfg(test)]
+fn expect_eq(lhs: f64, rhs: f64) {
+    assert!((lhs-rhs).abs() < 0.001);
+}
+
+#[cfg(test)]
+fn expect_eq_2d(lhs: &Point2d, rhs: &Point2d) {
+    assert!((lhs-rhs).length() < 0.001);
+}
+
+#[test]
+fn test_ray2d_intersect() {
+    let r1 = Ray2d::new(Point2d::new(1.0, 0.0), Point2d::new(0.0, 0.5));
+    let r2 = Ray2d::new(Point2d::new(0.0, 2.0), Point2d::new(0.1, 0.0));
+    
+    let alpha1 = r1.get_intersection(&r2).unwrap();
+    let alpha2 = r2.get_intersection(&r1).unwrap();
+    
+    expect_eq(4.0, alpha1);
+    expect_eq(10.0, alpha2);
+
+    expect_eq_2d(&r1.at(alpha1), &r2.at(alpha2)); 
 }

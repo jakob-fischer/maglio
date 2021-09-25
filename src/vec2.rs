@@ -284,11 +284,55 @@ impl Vec2d {
 pub type Vec2d = Vec2<f64>;
 
 
+#[test]
+fn test_vector_multiplication_scalar() {
+    let vec1 = Vec2::<i32>::new(0, 1);
+    let vec2 = Vec2::<i32>::new(-2, 3);
 
+    {
+        let mut result = vec1;
+        let scalar = 0;
+
+        result *= scalar;
+        assert_eq!(result, Vec2::new(0,0));
+    }
+
+    {
+        let scalar = 0;
+        let result = vec1 * scalar;
+        assert_eq!(result, Vec2::new(0,0));
+    }
+
+    {
+        let scalar = 0;
+        let result = &vec1 * scalar;
+        assert_eq!(result, Vec2::new(0,0));
+    }
+
+    {
+        let mut result = vec2;
+        let scalar = 4;
+
+        result *= scalar;
+        assert_eq!(result, Vec2::new(-8,12));
+    }
+
+    {
+        let scalar = 5;
+        let result = vec2 * scalar;
+        assert_eq!(result, Vec2::new(-10,15));
+    }
+
+    {
+        let scalar = 7;
+        let result = &vec2 * scalar;
+        assert_eq!(result, Vec2::new(-14,21));
+    }
+}
 
 
 #[test]
-fn test_addassign_nested_local() {
+fn test_addassign_nested() {
     let mut x : Vec2<Vec2<i32>> = Vec2::new(Vec2::new(1,2), Vec2::new(3,4));
     let y : Vec2<Vec2<i32>> = Vec2::new(Vec2::new(4,5), Vec2::new(6,7));
 
@@ -296,6 +340,4 @@ fn test_addassign_nested_local() {
 
     x += &y;
     assert_eq!(x, sum);
-
-    println!("{:?}", x);
 }
