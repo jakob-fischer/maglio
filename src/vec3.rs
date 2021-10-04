@@ -1,8 +1,10 @@
-use std::ops::*;
 pub use crate::traits::*;
 use crate::vec2::*;
+use ordered_float::NotNan;
+use std::hash::{Hash, Hasher};
+use std::ops::*;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vec3<T: Copy> {
     pub t: [T; 3],
 }
@@ -14,7 +16,7 @@ impl<T: Copy> Vec3<T> {
 
     pub fn as_vec2(&self) -> Vec2<T> {
         Vec2::new(self.t[0], self.t[1])
-    } 
+    }
 }
 
 impl<T: Add<T, Output = T> + Mul<T, Output = T> + Clone + Copy> Vec3<T> {
@@ -36,13 +38,6 @@ impl<T: Sub<T, Output = T> + Mul<T, Output = T> + Clone + Copy> Vec3<T> {
             self.t[2] * other.t[0] - self.t[0] * other.t[2],
             self.t[0] * other.t[1] - self.t[1] * other.t[0],
         )
-    }
-}
-
-impl Norm for Vec3<f32> {
-    type Length = f32;
-    fn length(self: &Self) -> Self::Length {
-        self.squared_length().sqrt()
     }
 }
 
@@ -320,9 +315,28 @@ impl Vec3d {
     pub fn refract(&self, n: &Vec3d, etai_over_etat: f64) -> Vec3d {
         let cos_theta = -n.dot(self).min(1.0);
         let r_out_perp = (self + n * cos_theta) * etai_over_etat;
-        let r_out_parallel = n * (-(1.0 - r_out_perp.squared_length()).abs().sqrt());
+
+        let z: f64 = -(1.0 - r_out_perp.squared_length()).abs();
+        let u: f64 = z.sqrt();
+        let r_out_parallel = n * u;
         r_out_perp + r_out_parallel
     }
 }
 
 pub type Vec3d = Vec3<f64>;
+
+impl Eq for Vec3d {}
+
+impl Hash for Vec3d {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        NotNan::<f64>::new(self.t[0]).unwrap().hash(state);
+        NotNan::<f64>::new(self.t[1]).unwrap().hash(state);
+        NotNan::<f64>::new(self.t[2]).unwrap().hash(state);
+    }
+}
+
+impl Vec3d {
+    pub fn new_raw(x: f64, y: f64, z: f64) -> Self {
+        Vec3d::new(x, y, z)
+    }
+}

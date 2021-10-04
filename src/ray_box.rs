@@ -1,6 +1,5 @@
-use crate::vec3::*;
-use crate::vec2::*;
 use crate::mat2::*;
+use crate::vec3::*;
 
 pub type Colour = Vec3d;
 pub type Point3d = Vec3d;
@@ -35,6 +34,93 @@ pub enum HitBoxResult {
     Miss,
     Inside(f64),
     Outside(f64, f64),
+}
+
+#[derive(Clone, Debug)]
+pub struct BoundingBox2d {
+    pub u: Vec2d,
+    pub v: Vec2d,
+}
+
+impl BoundingBox2d {
+    pub fn new(u: Vec2d, v: Vec2d) -> Self {
+        Self { u, v }
+    }
+
+    fn intersects_in_dimentions(&self, other: &Self, dimension: usize) -> bool {
+        self.v.t[dimension] >= other.u.t[dimension] && self.u.t[dimension] <= other.v.t[dimension]
+    }
+
+    pub fn intersects(&self, other: &Self) -> bool {
+        self.intersects_in_dimentions(other, 0) && self.intersects_in_dimentions(other, 1)
+    }
+
+    fn intersects_with_point_projected_in_dimension(
+        &self,
+        point: &Point2d,
+        dimension: usize,
+    ) -> bool {
+        match dimension {
+            0 => self.u.t[1] <= point.t[1] && point.t[1] <= self.v.t[1],
+            1 => self.u.t[0] <= point.t[0] && point.t[0] <= self.v.t[0],
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn is_hit_by_ray(&self, cray: &ConstrainedRay2d) -> HitBoxResult {
+        let ray = &cray.ray;
+        let range = &cray.range;
+
+        let mut result = vec![];
+
+        for i in 0..=1 {
+            if ray.direction.t[i] != 0.0 {
+                {
+                    let a_x1 = (self.u.t[i] - ray.origin.t[i]) / ray.direction.t[i];
+                    let p = ray.origin + ray.direction * a_x1;
+                    if self.intersects_with_point_projected_in_dimension(&p, i)
+                        && a_x1 >= range.0
+                        && a_x1 <= range.1
+                    {
+                        result.push(a_x1);
+                    }
+                }
+                {
+                    let a_x2 = (self.v.t[i] - ray.origin.t[i]) / ray.direction.t[i];
+                    let p = ray.origin + ray.direction * a_x2;
+                    if self.intersects_with_point_projected_in_dimension(&p, i)
+                        && a_x2 >= range.0
+                        && a_x2 <= range.1
+                    {
+                        result.push(a_x2);
+                    }
+                }
+            }
+        }
+        match result.len() {
+            0 => HitBoxResult::Miss,
+            1 => HitBoxResult::Inside(*result.get(0).unwrap()),
+            2 => {
+                let x = *result.get(0).unwrap();
+                let y = *result.get(1).unwrap();
+                if x < y {
+                    HitBoxResult::Outside(x, y)
+                } else {
+                    HitBoxResult::Outside(y, x)
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Default for BoundingBox2d {
+    fn default() -> Self {
+        BoundingBox2d {
+            u: Vec2d::new(0.0, 0.0),
+            v: Vec2d::new(1.0, 1.0),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -129,6 +215,15 @@ impl BoundingBox3d {
     }
 }
 
+impl Default for BoundingBox3d {
+    fn default() -> Self {
+        BoundingBox3d {
+            u: Vec3d::new_raw(0.0, 0.0, 0.0),
+            v: Vec3d::new_raw(1.0, 1.0, 1.0),
+        }
+    }
+}
+
 impl Ray3d {
     pub fn new(origin: Point3d, direction: Direction3d) -> Self {
         Self { origin, direction }
@@ -148,46 +243,44 @@ impl Ray2d {
         &(&self.direction * t) + &self.origin
     }
 
-    pub fn get_ray_between_points(p1 : &Point2d, p2 : &Point2d) -> Ray2d {
+    pub fn get_ray_between_points(p1: &Point2d, p2: &Point2d) -> Ray2d {
         let rot90 = &Mat2d::new_rot90();
         let direction = rot90 * (p2 - p1);
-        let origin = (p1+p2)*0.5;
-        Ray2d { origin, direction}
+        let origin = (p1 + p2) * 0.5;
+        Ray2d { origin, direction }
     }
 
-    pub fn get_intersection(self : &Ray2d, other : &Ray2d) -> Option<f64> {
-        let det = self.direction.t[0]*other.direction.t[1] - self.direction.t[1]*other.direction.t[0];
+    pub fn get_intersection(self: &Ray2d, other: &Ray2d) -> Option<f64> {
+        let det =
+            self.direction.t[0] * other.direction.t[1] - self.direction.t[1] * other.direction.t[0];
 
         if det == 0.0 {
-            return None
+            return None;
         }
 
         let dif = other.origin - self.origin;
-        Some((other.direction.t[1] * dif.t[0] - other.direction.t[0]*dif.t[1]) / det)
+        Some((other.direction.t[1] * dif.t[0] - other.direction.t[0] * dif.t[1]) / det)
     }
 }
 
-
 #[cfg(test)]
 fn expect_eq(lhs: f64, rhs: f64) {
-    assert!((lhs-rhs).abs() < 0.001);
+    assert_eq!((lhs - rhs).abs() < 0.001, true);
 }
 
 #[cfg(test)]
 fn expect_eq_2d(lhs: &Point2d, rhs: &Point2d) {
-    assert!((lhs-rhs).length() < 0.001);
+    assert_eq!((lhs - rhs).length() < 0.001, true);
 }
 
 #[test]
 fn test_ray2d_intersect() {
-    let r1 = Ray2d::new(Point2d::new(1.0, 0.0), Point2d::new(0.0, 0.5));
-    let r2 = Ray2d::new(Point2d::new(0.0, 2.0), Point2d::new(0.1, 0.0));
-    
+    let r1 = Ray2d::new(Point2d::new_raw(1.0, 0.0), Point2d::new_raw(0.0, 0.5));
+    let r2 = Ray2d::new(Point2d::new_raw(0.0, 2.0), Point2d::new_raw(0.1, 0.0));
     let alpha1 = r1.get_intersection(&r2).unwrap();
     let alpha2 = r2.get_intersection(&r1).unwrap();
-    
-    expect_eq(4.0, alpha1);
-    expect_eq(10.0, alpha2);
+    expect_eq(4.0, f64::from(alpha1));
+    expect_eq(10.0, f64::from(alpha2));
 
-    expect_eq_2d(&r1.at(alpha1), &r2.at(alpha2)); 
+    expect_eq_2d(&r1.at(alpha1), &r2.at(alpha2));
 }

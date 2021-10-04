@@ -1,5 +1,5 @@
-use std::ops::*;
 pub use crate::vec2::*;
+use std::ops::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Mat2<T: Copy> {
@@ -8,27 +8,22 @@ pub struct Mat2<T: Copy> {
 
 impl<T: Copy> Mat2<T> {
     pub fn new(row1: Vec2<T>, row2: Vec2<T>) -> Self {
-        Self { r: Vec2::<Vec2<T>>::new(row1, row2)}
-    }
-}
-
-impl Mat2<f32> {
-    pub fn new_rot(theta : f32) -> Self {
-        Self::new(Vec2::<f32>::new(theta.cos(), -theta.sin()), Vec2::<f32>::new(theta.sin(), theta.cos()))
-    }
-
-    pub fn new_rot90() -> Self {
-        Self::new_rot(std::f32::consts::PI/2.0)
+        Self {
+            r: Vec2::<Vec2<T>>::new(row1, row2),
+        }
     }
 }
 
 impl Mat2<f64> {
-    pub fn new_rot(theta : f64) -> Self {
-        Self::new(Vec2::<f64>::new(theta.cos(), -theta.sin()), Vec2::<f64>::new(theta.sin(), theta.cos()))
+    pub fn new_rot(theta: f64) -> Self {
+        Self::new(
+            Vec2d::new_raw(theta.cos(), -theta.sin()),
+            Vec2d::new_raw(theta.sin(), theta.cos()),
+        )
     }
 
     pub fn new_rot90() -> Self {
-        Self::new_rot(std::f64::consts::PI/2.0)
+        Self::new_rot(std::f64::consts::PI / 2.0)
     }
 }
 
@@ -36,9 +31,7 @@ impl<T: Neg<Output = T> + Copy> Neg for &Mat2<T> {
     type Output = Mat2<T>;
 
     fn neg(self) -> Self::Output {
-        Mat2::<T> {
-            r: self.r.neg()
-        }
+        Mat2::<T> { r: self.r.neg() }
     }
 }
 
@@ -46,9 +39,7 @@ impl<T: Neg<Output = T> + Copy> Neg for Mat2<T> {
     type Output = Mat2<T>;
 
     fn neg(self) -> Self::Output {
-        Mat2::<T> {
-            r: self.r.neg(),
-        }
+        Mat2::<T> { r: self.r.neg() }
     }
 }
 
@@ -56,9 +47,7 @@ impl<T: Add<T, Output = T> + Copy> Add<&Mat2<T>> for &Mat2<T> {
     type Output = Mat2<T>;
 
     fn add(self, rhs: &Mat2<T>) -> Self::Output {
-        Mat2::<T> {
-            r: self.r + rhs.r,
-        }
+        Mat2::<T> { r: self.r + rhs.r }
     }
 }
 
@@ -99,12 +88,9 @@ impl<T: Sub<T, Output = T> + Copy> Sub<&Mat2<T>> for &Mat2<T> {
     type Output = Mat2<T>;
 
     fn sub(self, rhs: &Mat2<T>) -> Self::Output {
-        Mat2::<T> {
-            r: self.r - rhs.r
-        }
+        Mat2::<T> { r: self.r - rhs.r }
     }
 }
-
 
 impl<T: Sub<T, Output = T> + Copy> Sub<Mat2<T>> for Mat2<T> {
     type Output = Mat2<T>;
@@ -146,14 +132,14 @@ impl<T: Mul<T, Output = T> + Add<T, Output = T> + Copy> Mul<&Mat2<T>> for &Mat2<
         let rhs_col0 = Vec2::<T>::new(rhs.r.t[0].t[0], rhs.r.t[1].t[0]);
         let rhs_col1 = Vec2::<T>::new(rhs.r.t[0].t[1], rhs.r.t[1].t[1]);
 
-        Mat2::<T>::new( 
-            Vec2::<T>::new(self.r.t[0].dot(&rhs_col0),  self.r.t[0].dot(&rhs_col1)),
-            Vec2::<T>::new(self.r.t[1].dot(&rhs_col0),  self.r.t[1].dot(&rhs_col1)),
-        ) 
+        Mat2::<T>::new(
+            Vec2::<T>::new(self.r.t[0].dot(&rhs_col0), self.r.t[0].dot(&rhs_col1)),
+            Vec2::<T>::new(self.r.t[1].dot(&rhs_col0), self.r.t[1].dot(&rhs_col1)),
+        )
     }
 }
 
-impl<T: Mul<T, Output = T> + Add<T, Output = T>  + Copy> Mul<Mat2<T>> for Mat2<T> {
+impl<T: Mul<T, Output = T> + Add<T, Output = T> + Copy> Mul<Mat2<T>> for Mat2<T> {
     type Output = Mat2<T>;
 
     fn mul(mut self, rhs: Mat2<T>) -> Self::Output {
@@ -190,7 +176,7 @@ impl<T: Mul<T, Output = T> + Add<T, Output = T> + Copy> Mul<&Vec2<T>> for &Mat2<
     type Output = Vec2<T>;
 
     fn mul(self, rhs: &Vec2<T>) -> Self::Output {
-        Vec2::<T>::new(self.r.t[0].dot(&rhs),  self.r.t[1].dot(&rhs))    
+        Vec2::<T>::new(self.r.t[0].dot(&rhs), self.r.t[1].dot(&rhs))
     }
 }
 
@@ -219,7 +205,7 @@ impl<T: MulAssign<T> + Copy> Mul<T> for Mat2<T> {
 
     fn mul(mut self, rhs: T) -> Self::Output {
         self *= rhs;
-        self 
+        self
     }
 }
 
@@ -229,7 +215,6 @@ impl<T: MulAssign<T> + Copy> MulAssign<T> for Mat2<T> {
         self.r.t[1] *= rhs;
     }
 }
-
 
 impl<T: Div<T, Output = T> + Copy> Div<T> for &Mat2<T> {
     type Output = Mat2<T>;

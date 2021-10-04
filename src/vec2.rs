@@ -1,7 +1,9 @@
-use std::ops::*;
 pub use crate::traits::*;
+use ordered_float::NotNan;
+use std::hash::{Hash, Hasher};
+use std::ops::*;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub struct Vec2<T: Copy> {
     pub t: [T; 2],
 }
@@ -21,13 +23,6 @@ impl<T: Add<T, Output = T> + Mul<T, Output = T> + Clone + Copy> Vec2<T> {
 impl<T: Add<T, Output = T> + Mul<T, Output = T> + Clone + Copy> Vec2<T> {
     pub fn dot(self: &Vec2<T>, other: &Vec2<T>) -> T {
         self.t[0] * other.t[0] + self.t[1] * other.t[1]
-    }
-}
-
-impl Norm for Vec2<f32> {
-    type Length = f32;
-    fn length(self: &Self) -> Self::Length {
-        self.squared_length().sqrt()
     }
 }
 
@@ -63,10 +58,7 @@ impl<T: Add<T, Output = T> + Copy> Add<&Vec2<T>> for &Vec2<T> {
 
     fn add(self, rhs: &Vec2<T>) -> Self::Output {
         Vec2::<T> {
-            t: [
-                self.t[0] + rhs.t[0],
-                self.t[1] + rhs.t[1],
-            ],
+            t: [self.t[0] + rhs.t[0], self.t[1] + rhs.t[1]],
         }
     }
 }
@@ -113,10 +105,7 @@ impl<T: Sub<T, Output = T> + Copy> Sub<&Vec2<T>> for &Vec2<T> {
 
     fn sub(self, rhs: &Vec2<T>) -> Self::Output {
         Vec2::<T> {
-            t: [
-                self.t[0] - rhs.t[0],
-                self.t[1] - rhs.t[1],
-            ],
+            t: [self.t[0] - rhs.t[0], self.t[1] - rhs.t[1]],
         }
     }
 }
@@ -163,10 +152,7 @@ impl<T: Mul<T, Output = T> + Copy> Mul<&Vec2<T>> for &Vec2<T> {
 
     fn mul(self, rhs: &Vec2<T>) -> Self::Output {
         Vec2::<T> {
-            t: [
-                self.t[0] * rhs.t[0],
-                self.t[1] * rhs.t[1],
-            ],
+            t: [self.t[0] * rhs.t[0], self.t[1] * rhs.t[1]],
         }
     }
 }
@@ -283,6 +269,20 @@ impl Vec2d {
 
 pub type Vec2d = Vec2<f64>;
 
+impl Vec2d {
+    pub fn new_raw(x: f64, y: f64) -> Self {
+        Vec2d::new(x, y)
+    }
+}
+
+impl Eq for Vec2d {}
+
+impl Hash for Vec2d {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        NotNan::<f64>::new(self.t[0]).unwrap().hash(state);
+        NotNan::<f64>::new(self.t[1]).unwrap().hash(state);
+    }
+}
 
 #[test]
 fn test_vector_multiplication_scalar() {
@@ -294,19 +294,19 @@ fn test_vector_multiplication_scalar() {
         let scalar = 0;
 
         result *= scalar;
-        assert_eq!(result, Vec2::new(0,0));
+        assert_eq!(result, Vec2::new(0, 0));
     }
 
     {
         let scalar = 0;
         let result = vec1 * scalar;
-        assert_eq!(result, Vec2::new(0,0));
+        assert_eq!(result, Vec2::new(0, 0));
     }
 
     {
         let scalar = 0;
         let result = &vec1 * scalar;
-        assert_eq!(result, Vec2::new(0,0));
+        assert_eq!(result, Vec2::new(0, 0));
     }
 
     {
@@ -314,29 +314,28 @@ fn test_vector_multiplication_scalar() {
         let scalar = 4;
 
         result *= scalar;
-        assert_eq!(result, Vec2::new(-8,12));
+        assert_eq!(result, Vec2::new(-8, 12));
     }
 
     {
         let scalar = 5;
         let result = vec2 * scalar;
-        assert_eq!(result, Vec2::new(-10,15));
+        assert_eq!(result, Vec2::new(-10, 15));
     }
 
     {
         let scalar = 7;
         let result = &vec2 * scalar;
-        assert_eq!(result, Vec2::new(-14,21));
+        assert_eq!(result, Vec2::new(-14, 21));
     }
 }
 
-
 #[test]
 fn test_addassign_nested() {
-    let mut x : Vec2<Vec2<i32>> = Vec2::new(Vec2::new(1,2), Vec2::new(3,4));
-    let y : Vec2<Vec2<i32>> = Vec2::new(Vec2::new(4,5), Vec2::new(6,7));
+    let mut x: Vec2<Vec2<i32>> = Vec2::new(Vec2::new(1, 2), Vec2::new(3, 4));
+    let y: Vec2<Vec2<i32>> = Vec2::new(Vec2::new(4, 5), Vec2::new(6, 7));
 
-    let sum : Vec2<Vec2<i32>> = Vec2::new(Vec2::new(5,7), Vec2::new(9,11));
+    let sum: Vec2<Vec2<i32>> = Vec2::new(Vec2::new(5, 7), Vec2::new(9, 11));
 
     x += &y;
     assert_eq!(x, sum);

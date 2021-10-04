@@ -1,159 +1,19 @@
+use crate::kd_tree_traits::*;
 use crate::ray_box::*;
-use crate::vec3::*;
-use std::sync::Arc;
+use std::collections::HashSet;
 
-pub trait BoundingBoxTrait: Sized + Clone + Default + std::fmt::Debug {
-    fn partition(&self) -> Option<(Self, Self)>;
-    fn extend(&self) -> Option<(Self, Self)>; // First is other, Second new parent
-
-    fn is_contained(&self, other: &Self) -> bool;
-    fn intersects(&self, other: &Self) -> bool;
-
-    fn is_sub_scale(&self, other: &Self) -> bool;
-}
-
-pub trait HittableBoundingBoxTrait: BoundingBoxTrait {
-    fn hit(&self, ray: &ConstrainedRay3d) -> HitBoxResult;
-}
-
-impl Default for BoundingBox3d {
-    fn default() -> Self {
-        BoundingBox3d {
-            u: Vec3d::new(0.0, 0.0, 0.0),
-            v: Vec3d::new(1.0, 1.0, 1.0),
-        }
-    }
-}
-
-impl BoundingBox3d {
-    fn get_most_narrow_dimension(&self) -> usize {
-        let dx = self.v.t[0] - self.u.t[0];
-        let dy = self.v.t[1] - self.u.t[1];
-        let dz = self.v.t[2] - self.u.t[2];
-
-        if dx < dy && dx < dz {
-            0
-        } else if dy < dz {
-            1
-        } else {
-            2
-        }
-    }
-
-    fn get_widest_dimension(&self) -> usize {
-        let dx = self.v.t[0] - self.u.t[0];
-        let dy = self.v.t[1] - self.u.t[1];
-        let dz = self.v.t[2] - self.u.t[2];
-
-        if dx > dy && dx > dz {
-            0
-        } else if dy > dz {
-            1
-        } else {
-            2
-        }
-    }
-}
-
-impl BoundingBoxTrait for BoundingBox3d {
-    fn partition(&self) -> Option<(Self, Self)> {
-        if (self.u - self.v).length() < 1e-8 {
-            return None;
-        }
-
-        let dim = self.get_widest_dimension();
-        let midpoint = 0.5 * (self.v.t[dim] + self.u.t[dim]);
-
-        let mut u_new = self.u;
-        let mut v_new = self.v;
-        u_new.t[dim] = midpoint;
-        v_new.t[dim] = midpoint;
-
-        Some((
-            BoundingBox3d {
-                u: self.u,
-                v: v_new,
-            },
-            BoundingBox3d {
-                u: u_new,
-                v: self.v,
-            },
-        ))
-    }
-
-    fn extend(&self) -> Option<(Self, Self)> {
-        if (self.u - self.v).length() > 1e8 {
-            return None;
-        }
-
-        let dim = self.get_most_narrow_dimension();
-
-        let right = self.v.t[dim];
-        let left = self.u.t[dim];
-        let dif = right - left;
-        let left_clamped = if left < 0.0 { left } else { 0.0 };
-        let right_clamped = if right > 0.0 { right } else { 0.0 };
-        let mut template = self.clone();
-
-        if -left_clamped < right_clamped {
-            template.u.t[dim] -= dif;
-            template.v.t[dim] -= dif;
-            let parent = Self {
-                u: template.u.clone(),
-                v: self.v.clone(),
-            };
-            Some((template, parent))
-        } else {
-            template.u.t[dim] += dif;
-            template.v.t[dim] += dif;
-            let parent = Self {
-                u: self.u.clone(),
-                v: template.v.clone(),
-            };
-            Some((template, parent))
-        }
-    }
-
-    fn is_contained(&self, other: &Self) -> bool {
-        other.u.t[0] <= self.u.t[0]
-            && self.v.t[0] <= other.v.t[0]
-            && other.u.t[1] <= self.u.t[1]
-            && self.v.t[1] <= other.v.t[1]
-            && other.u.t[2] <= self.u.t[2]
-            && self.v.t[2] <= other.v.t[2]
-    }
-
-    fn intersects(&self, other: &Self) -> bool {
-        self.intersects(other)
-    }
-
-    fn is_sub_scale(&self, other: &Self) -> bool {
-        (self.v - self.u).length() <= (other.v - other.u).length()
-    }
-}
-
-impl HittableBoundingBoxTrait for BoundingBox3d {
-    fn hit(&self, ray: &ConstrainedRay3d) -> HitBoxResult {
-        self.is_hit_by_ray(&ray)
-    }
-}
-
-pub trait KdTreeContent<BoundingBox: BoundingBoxTrait>: Sized {
-    fn get_bounding_box(&self) -> BoundingBox;
-}
-
-struct KdNode<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>> {
+struct KdNode<BoundingBox: BoundingBoxTrait, Content: KdTreeContent<BoundingBox>> {
     enclosure: BoundingBox,
-    content: Vec<Arc<Content>>,
+    content: Vec<Content>,
     children: Vec<Self>,
 }
 
-pub struct KdTree<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>> {
+pub struct KdTree<BoundingBox: BoundingBoxTrait, Content: KdTreeContent<BoundingBox>> {
     root: Option<KdNode<BoundingBox, Content>>,
     size: usize,
 }
 
-impl<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
+impl<BoundingBox: BoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
     KdTree<BoundingBox, Content>
 {
     fn new_node(enclosure: BoundingBox) -> KdNode<BoundingBox, Content> {
@@ -166,7 +26,7 @@ impl<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
 
     fn add_to_node(
         node: &mut KdNode<BoundingBox, Content>,
-        content: &Arc<Content>,
+        content: &Content,
         content_enclosure: &BoundingBox,
     ) {
         if content_enclosure.is_sub_scale(&node.enclosure)
@@ -204,15 +64,14 @@ impl<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
     }
 
     pub fn new() -> Self {
-        Self {
+        KdTree {
             root: Some(Self::new_node(BoundingBox::default())),
             size: 0,
         }
     }
 
-    pub fn add(&mut self, content: &Arc<Content>) {
+    pub fn add(&mut self, content: Content) {
         let content_enclosure = content.get_bounding_box();
-        let content = content.clone();
 
         while !content_enclosure.is_contained(&self.root.as_ref().unwrap().enclosure) {
             let (other, parent) = self.root.as_ref().unwrap().enclosure.extend().unwrap();
@@ -234,11 +93,45 @@ impl<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
         self.size += 1;
     }
 
+    fn get_intersection_internal(
+        node: &KdNode<BoundingBox, Content>,
+        filter: &BoundingBox,
+        result: &mut HashSet<Content>,
+    ) {
+        if !node.enclosure.intersects(filter) {
+            return;
+        }
+
+        for content in &node.content {
+            if content.get_bounding_box().intersects(filter) {
+                result.insert(content.clone());
+            }
+        }
+
+        for child in &node.children {
+            Self::get_intersection_internal(child, filter, result);
+        }
+    }
+
+    pub fn get_intersection(&self, filter: &BoundingBox) -> HashSet<Content> {
+        let mut result = HashSet::new();
+
+        if let Some(node) = &self.root {
+            Self::get_intersection_internal(node, filter, &mut result);
+        }
+
+        result
+    }
+}
+
+impl<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
+    KdTree<BoundingBox, Content>
+{
     fn get_closest_hit_internal<F>(
         node: &KdNode<BoundingBox, Content>,
         fun: &F,
         cray: &ConstrainedRay3d,
-        result: &mut Option<Arc<Content>>,
+        result: &mut Option<Content>,
         current: &mut f64,
     ) where
         F: Fn(&Content, &ConstrainedRay3d) -> Option<f64>,
@@ -267,11 +160,11 @@ impl<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
         }
     }
 
-    pub fn get_closest_hit<F>(&self, fun: &F, cray: &ConstrainedRay3d) -> Option<Arc<Content>>
+    pub fn get_closest_hit<F>(&self, fun: &F, cray: &ConstrainedRay3d) -> Option<Content>
     where
         F: Fn(&Content, &ConstrainedRay3d) -> Option<f64>,
     {
-        let mut result: Option<Arc<Content>> = None;
+        let mut result: Option<Content> = None;
         let mut current = cray.range.1;
         Self::get_closest_hit_internal::<F>(
             &self.root.as_ref().unwrap(),
@@ -282,5 +175,45 @@ impl<BoundingBox: HittableBoundingBoxTrait, Content: KdTreeContent<BoundingBox>>
         );
 
         result
+    }
+}
+
+#[test]
+fn test_kd_tree_with_points_2d() {
+    let mut kd_tree = KdTree::<BoundingBox2d, Point2d>::new();
+
+    kd_tree.add(Point2d::new_raw(0.0, 3.0));
+    kd_tree.add(Point2d::new_raw(1.0, 12.0));
+    kd_tree.add(Point2d::new_raw(5.0, 2.0));
+    kd_tree.add(Point2d::new_raw(-3.0, 2.0));
+    kd_tree.add(Point2d::new_raw(3.3, -1.0));
+    kd_tree.add(Point2d::new_raw(3.3, 3.0));
+    assert_eq!(kd_tree.size, 6);
+
+    {
+        let result = kd_tree.get_intersection(&BoundingBox2d {
+            u: Point2d::new_raw(0.0, 0.0),
+            v: Point2d::new_raw(4.0, 4.0),
+        });
+        println!("{:?}", result);
+        assert_eq!(result.len(), 2);
+    }
+
+    {
+        let result = kd_tree.get_intersection(&BoundingBox2d {
+            u: Point2d::new_raw(2.0, 2.0),
+            v: Point2d::new_raw(6.0, 6.0),
+        });
+        println!("{:?}", result);
+        assert_eq!(result.len(), 2);
+    }
+
+    {
+        let result = kd_tree.get_intersection(&BoundingBox2d {
+            u: Point2d::new_raw(-6.0, 1.0),
+            v: Point2d::new_raw(6.0, 4.0),
+        });
+        println!("{:?}", result);
+        assert_eq!(result.len(), 4);
     }
 }
